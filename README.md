@@ -38,7 +38,7 @@ These characteristics make *Jaipur* an excellent environment for RL research.
 
 ## 🚀 Quick Start
 
-To get started with **Bazaar**, simply import the library, set up your traders (agents), and start a game. Here's a minimal example of how to run a basic game between two random traders:
+To get started with **Bazaar**, simply import the library using `pip install bazaar-ai`, set up your traders (agents), and start a game. Here's a minimal example of how to run a basic game between two random traders:
 
 ```python
 from bazaar_ai import game, trader, market
