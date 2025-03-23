@@ -1,30 +1,24 @@
-DIAMOND = "diamond"
-GOLD    = "gold"
-SILVER  = "silver"
-FABRIC  = "fabric"
-SPICE   = "spice"
-LEATHER = "leather"
-CAMEL   = "camel"
-THREE   = "3"
-FOUR    = "4"
-FIVE    = "5"
-MONEY   = "money"
+from enum import Enum
 
-TAKE    = "take"
-HERD    = "herd"
-SELL    = "sell"
-TRADE   = "trade"
-
-ICONS = {
-    DIAMOND:  "💎",
-    GOLD:     "🪙",
-    SILVER:   "🪨",
-    FABRIC:   "👚",
-    SPICE:    "🌶️",
-    LEATHER:  "👞",
-    CAMEL:    "🐪",
-    THREE:    "3️⃣",
-    FOUR:     "4️⃣",
-    FIVE:     "5️⃣",
-    MONEY:    "💰"
-}
+class GoodTypes(Enum):
+    DIAMOND = "💎"
+    GOLD = "🪙"
+    SILVER = "🪨"
+    FABRIC = "👚"
+    SPICE = "🌶️"
+    LEATHER = "👞"
+    CAMEL = "🐪"
+    
+class ActionTypes(Enum):
+    TAKE    = "take"
+    HERD    = "herd"
+    SELL    = "sell"
+    TRADE   = "trade"
+    
+class BonusTypes(Enum):
+    THREE = "3️⃣"
+    FOUR = "4️⃣"
+    FIVE = "5️⃣"
+    
+class Stats(Enum):
+    MONEY = "💰"

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bazaar_ai"
-version = "0.0.3"
+version = "0.0.5"
 authors = [
   { name="Chandra Gummaluru", email="chandra.gummaluru@gmail.com" },
 ]
@@ -18,5 +18,5 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/chandra-gummaluru/bazaar_ai
+Homepage = "https://github.com/chandra-gummaluru/bazaar_ai"
 Issues = "https://github.com/chandra-gummaluru/bazaar_ai/issues"

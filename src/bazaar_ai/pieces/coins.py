@@ -10,9 +10,25 @@ class Coin:
     @property
     def value(self):
       return self._value
+      
+    def summary(self):
+      return f"{self.value}"  
 
-    def __repr__(self) -> str:
-      return f"{self.value}"
+    def __repr__(self):
+        return self.summary()
+        
+    def __str__(self):
+        return self.summary()
+        
+    def __eq__(self, other):
+        # two coins are equal if they are the same type and value
+        if isinstance(other, BonusCoin):
+            return (self.value == other.value and
+                self.good_type == other.good_type)
+        return False
+        
+    def __hash__(self):
+        return hash(self.good_type) + hash(self.value)
       
       
 class BonusCoin:
@@ -28,5 +44,23 @@ class BonusCoin:
     def value(self):
       return self._value
 
-    def __repr__(self) -> str:
-      return f"{self.value}"
+    def summary(self):
+      return f"{self.value}"  
+    
+    def __repr__(self):
+        return self.summary()
+        
+    def __str__(self):
+        return self.summary()
+        
+    def __eq__(self, other):
+        # two bonus coins are equal if they are the same type and value
+        if isinstance(other, BonusCoin):
+            return (self.value == other.value and
+                self.bonus_type == other.bonus_type)
+        return False
+        
+    def __hash__(self):
+        return hash(self.bonus_type) + hash(self.value)
+        
+       
