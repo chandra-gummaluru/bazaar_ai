@@ -93,7 +93,10 @@ class CustomTrader(Trader):
         actions = self.get_all_actions(market_observation)
         
         # choose an action
-        # based on the market observation, the trader's hand, and his/her satchel
+        # based on the market observation (market_observation),
+        # the trader's hand (self.hand.goods), and
+        # his/her satchel (self.satchel)
+        # see the source code for the implementation of these objects
         # appropriate __eq__ functions have been defined for all of these objects
         # these objects also support serialization allowing training data to be saved
         
