@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: bazaar_ai
-Version: 0.0.5
+Version: 0.0.6
 Summary: A simple bazaar simulator
 Author-email: Chandra Gummaluru <chandra.gummaluru@gmail.com>
 Project-URL: Homepage, https://github.com/chandra-gummaluru/bazaar_ai
@@ -56,30 +56,24 @@ These characteristics make *Jaipur* an excellent environment for RL research.
 To get started with **Bazaar**, simply import the library, set up your traders (agents), and start a game. Here's a minimal example of how to run a basic game between two random traders:
 
 ```python
-from bazaar_ai import game, trader, market
-from bazaar_ai.terms import GoodTypes, BonusTypes
-import random
+from bazaar_ai.bazaar import BasicBazaar, Trader
 
-# Define the traders (players in the game)
-# Here we create two traders who each play using a random policy. The Trader class can be extended to include more advanced policies.
-trader1 = trader.Trader(
-    name="Caveman",
-    seed=321,
+trader1 = Trader(seed = 0,
+                 name = "Caveman")
+trader2 = Trader(seed = 0, 
+                 name = "Villager")
+
+traders = {
+    trader1.id: trader1,
+    trader2.id: trader2
+}
+
+game = BasicBazaar(
+    seed = 0,
+    players = traders,
 )
-trader2 = trader.Trader(
-    name="Villager",
-    seed=247,
-)
 
-traders = [trader1, trader2]
-
-# Initialize and play a classic game
-g = game.ClassicGame(traders)
-g.setup()
-g.play(verbosity=game.Verbosity.ALL) 
-
-# Display the stats after the game is completed
-g.show_stats()
+game.play()
 ```
 
 To implement custom agents, the `Trader` class can be extended.
@@ -94,24 +88,56 @@ class CustomTrader(Trader):
         # add additional data
         pass 
             
-    def select_action(self, market_observation):
+        
+    def select_action(self,
+                  actions: list[TraderAction],
+                  observation: MarketObservation):
         """
-        Method for selecting an action based on the market observation, the trader's
-        hand, and his/her satchel.
+        Method for selecting an action based on the market observation.
 
         Args:
+            actions (list[TraderAction]): The list of actions.
             market_observation (MarketObservation): The current state of the market.
 
         Returns:
             Action: The selected action.
         """
-        actions = self.get_all_actions(market_observation)
         
         # choose an action
-        # based on the market observation, the trader's hand, and his/her satchel
-        # appropriate __eq__ functions have been defined for all of these objects
-        # these objects also support serialization allowing training data to be saved
+        # based on the market observation
         
         pass
+    
+    
+    def calculate_reward(self,
+                         old_observation: MarketObservation,
+                         new_observation: MarketObservation,
+                         has_acted: bool,
+                         environment_reward: Optional[float]):
+        """
+        Calculates the reward based on the change in market conditions, the action taken, and any external environment reward.
+
+        Parameters:
+        ----------
+        old_observation : MarketObservation
+            The previous state of the market before the action was taken.
+
+        new_observation : MarketObservation
+            The current state of the market after the action is taken.
+
+        has_acted : bool
+            A flag indicating whether an action was actually taken. This could influence the reward calculation, as no action may imply no reward.
+
+        environment_reward : Optional[float]
+            An optional reward value from the environment. This reward could come from an external system that influences the agent's reward function.
+
+        Returns:
+        -------
+        float
+            The calculated reward, which might take into account the market change, the action, and the environment's reward. 
+            This value should be positive or negative based on the desirability of the new market state or the success of the action taken.
+        """
+        pass
+
 ```
 

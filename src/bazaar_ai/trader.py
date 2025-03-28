@@ -1,273 +1,183 @@
-from abc import ABC, abstractmethod
-from .terms import GoodTypes, BonusTypes, Stats
-from .actions import Take, Trade, Sell, Herd
+from typing import Optional
+from enum import Enum
 
-import random
+from arelai.player import Player, Action
 
-# formatting
-bold = "\033[1m"
-reset = "\033[0m"
-fg_white = "\033[38;2;255;255;255m"
-bg_black = "\033[48;2;0;0;0m"
+from .market import MarketObservation
+from .goods import GoodType, Goods
 
+class TraderActionType(Enum):
+    TAKE    = "Take"
+    SELL    = "Sell"
+    TRADE   = "Trade"
 
-class Trader:
-    """
-    Represents a trader participating in the market, holding goods and coins.
-
-    Attributes:
-        rng (random.Random): The random number generator used by the trader.
-        name (str): The trader's name.
-        hand (Hand): The goods currently in the trader's hand.
-        satchel (Satchel): The trader's satchel for holding coins and bonus coins.
-    """
-
-    def __init__(self, seed, name):
-        """
-        Initializes a new trader with the given seed and name.
-
-        Args:
-            seed (int): The seed for random number generation.
-            name (str): The name of the trader.
-        """
-
-        # use this for any random operations
-        self._rng = random.Random(seed)
-
-        self._name = name
-        self._hand = Hand([])
-        self._satchel = Satchel()
+class TraderAction(Action):
+    def __init__(self,
+                 trader_action_type: TraderActionType,
+                 requested_goods: Goods,
+                 offered_goods: Goods
+                 ):
+        self._trader_action_type = trader_action_type
+        self.requested_goods = requested_goods
+        self.offered_goods = offered_goods
 
     @property
-    def rng(self):
-        return self._rng
+    def trader_action_type(self):
+        return self._trader_action_type
 
-    @property
-    def name(self):
-        return self._name
 
-    @property
-    def hand(self):
-        return self._hand
+class SellAction(TraderAction):
+    MIN_SELL_COUNT = {
+    GoodType.DIAMOND: 2,
+    GoodType.GOLD: 2,
+    GoodType.SILVER: 2,
+    GoodType.FABRIC: 1,
+    GoodType.SPICE: 1,
+    GoodType.LEATHER: 1,
+    GoodType.CAMEL: 0
+    }
+    
+    def __init__(self, sell: GoodType, count: int):
+        
+        self._sell = sell
+        self._count = count
 
-    @property
-    def satchel(self):
-        return self._satchel
+        requested_goods = Goods()
+        offered_goods = Goods.from_dict({sell: count})
+        
+        super().__init__(
+            TraderActionType.SELL,
+            requested_goods,
+            offered_goods
+            )
+    
+    def all_actions(observation: MarketObservation) -> list['SellAction']:
+        actions = []
+        actor_goods = observation.actor_goods
+        for good_type in GoodType:
+            if good_type == GoodType.CAMEL:
+                continue
+            for count in range(SellAction.MIN_SELL_COUNT[good_type], actor_goods[good_type]+1):
+                action = SellAction(good_type, count)
+                actions.append(action)
+        return actions
+    
+class TakeAction(TraderAction):
+    def __init__(self, take: GoodType, count: int):
+        
+        self._take = take
+        self._count = count
 
-    def get_all_actions(self, market_observation):
-        """
-        Returns a list of all possible actions the trader can take based on the market observation.
 
-        Args:
-            market_observation (MarketObservation): The current state of the market.
+        offered_goods = Goods()
+        requested_goods = Goods.from_dict({take: count})
 
-        Returns:
-            list: A list of possible actions.
-        """
+        super().__init__(
+            TraderActionType.TAKE,
+            requested_goods,
+            offered_goods)
+
+    def all_actions(observation: MarketObservation) -> list['TakeAction']:
+        actions = []
+        
+        market_goods = observation.market_goods
+        actor_goods = observation.actor_goods
+
+        # if taking camels, must take all camels
+        if market_goods[GoodType.CAMEL] > 0:
+            actions.append(TakeAction(GoodType.CAMEL, market_goods[GoodType.CAMEL]))
+        # otherwise, the actor cannot take more goods than he/she can hold
+        if actor_goods.count(include_camels=False) < observation.max_player_goods_count:
+            for good_type in GoodType:
+                if good_type != GoodType.CAMEL:
+                    if market_goods[good_type] > 0:
+                        actions.append(TakeAction(good_type, 1))
+        return actions
+    
+
+class TradeAction(TraderAction):
+    def __init__(self, net: Goods):
+
+        requested_goods = Goods()
+        offered_goods = Goods()
+
+        for good_type in GoodType:
+            if net[good_type] > 0:
+                for _ in range(net[good_type]):
+                    requested_goods.add(good_type)
+            elif net[good_type] < 0:
+                for _ in range(abs(net[good_type])):
+                    offered_goods.add(good_type)
+
+        super().__init__(
+            TraderActionType.TRADE,
+            requested_goods,
+            offered_goods)
+
+    def all_actions(observation: MarketObservation) -> list['TradeAction']:
+        from itertools import product
+
+        actor_goods = observation.actor_goods
+        market_goods = observation.market_goods
+
+        max_take = {gt: market_goods[gt] for gt in GoodType if gt != GoodType.CAMEL}
+        max_give = {gt: actor_goods[gt] for gt in GoodType}
+
+        # Generate all combinations of give/take from -max_give to +max_take
+        ranges = {gt: range(-max_give[gt], max_take.get(gt, 0)+1) for gt in GoodType}
+        all_possible = product(*[ranges[gt] for gt in GoodType])
 
         actions = []
-        actions += Take.get_all_actions(self.hand, market_observation)
-        actions += Trade.get_all_actions(self.hand, market_observation)
-        actions += Sell.get_all_actions(self.hand, market_observation)
-        actions += Herd.get_all_actions(self.hand, market_observation)
+        for combo in all_possible:
+            action = TradeAction(Goods.from_dict(dict(zip(GoodType, combo))))
+            
+            requested_goods = action.requested_goods
+            offered_goods = action.offered_goods
 
+            # no camels can be taken
+            if requested_goods[GoodType.CAMEL] > 0:
+                continue
+
+            # the number of goods taken must equal the number of goods given
+            if requested_goods.count() != offered_goods.count():
+                continue
+
+            # at least two goods must be taken
+            if requested_goods.count() < 2:
+                continue
+            
+            # cannot take more than the actor can hold
+            requested_non_camels_count = requested_goods.count(include_camels=False)
+            if actor_goods.count(include_camels=False) + requested_non_camels_count > observation.max_player_goods_count:
+                continue 
+
+            # cannot give more than actor has or take more than market has
+            violates = False
+            for gt in GoodType:
+                if requested_goods[gt] > market_goods[gt]:
+                    violates = True
+                if offered_goods[gt] > actor_goods[gt]:
+                    violates = True
+            if violates:
+                continue
+            actions.append(action)
         return actions
 
-    @abstractmethod
-    def select_action(self, market_observation):
-        """
-        Abstract method for selecting an action based on the market observation,
-        the trader's hand, and his/her satchel.
 
-        Args:
-            market_observation (MarketObservation): The current state of the market.
+class Trader(Player):
+    def __init__(self,
+                 seed,
+                 name):
+        super().__init__(seed, name)
 
-        Returns:
-            Action: The selected action.
-        """
-        actions = self.get_all_actions(market_observation)
-
+    def select_action(self,
+                      actions: list[TraderAction],
+                      observation: MarketObservation):
         return self.rng.choice(actions)
-        
-    def summary(self):
-        """
-        Returns a string representation of the trader, including their hand and satchel.
-
-        Returns:
-            str: The string representation of the trader.
-        """
-        bold = "\033[1m"
-        reset = "\033[0m"
-        fg_white = "\033[38;2;255;255;255m"
-        bg_black = "\033[48;2;0;0;0m"
-
-        s = f"{bg_black}{fg_white}{self.name}{reset}\n"
-        s += f"{bold}Hand:{reset}\n{self.hand.goods}\n{self.satchel}"
-
-        return s
-
-    def __str__(self):
-        return self.summary()
-
-        
-class Hand:
-    """
-    Represents a hand used by a trader to hold goods.
     
-    Attributes:
-        goods (list): The list of goods in the hand.
-    """
-    
-    def __init__(self, goods):
-        self._goods = sorted(goods, key=lambda good: good.good_type.name)
-        
-    @property
-    def goods(self):
-        return self._goods
-        
-    def append(self, good):
-        self.goods.append(good)
-        self.goods.sort(key=lambda good: good.good_type.name)
-    
-    def remove(self, good):
-        self.goods.remove(good)
-        self.goods.sort(key=lambda good: good.good_type.name)
-        
-    def count_goods(self, include_all=False):
-        count = 0
-        for good in self.goods:
-            if include_all or (good.good_type != GoodTypes.CAMEL):
-                count += 1
-        return count
-                
-    
-    def __repr__(self):
-        s = f""
-        s += str(self.goods_reserve_count)
-        
-        goods_map = {}
-        for good in self.goods:
-            goods_map[good.good_type] = goods_map.get(good.good_type, 0) + 1
-        
-        for good_type in GoodTypes:
-            if good_type != GoodTypes.CAMEL:
-                s += "_" + str(good_type.name) + ":" + str(goods_map.get(good_type, 0)) + ":" + str(self.coin_stacks[good_type])
-            
-        return s
-        
-    def __eq__(self, other):
-        # two hands are the same if they contain the same goods
-        if isinstance(other, Hand):
-            return repr(self) == repr(other)
-
-    def __hash__(self):
-        return hash(repr(self))
-        
-class Satchel:
-    """
-    Represents a satchel used by a trader to hold coins and bonus coins.
-
-    Attributes:
-        coins (list): The list of coins in the satchel.
-        bonus_coins (dict): A dictionary of bonus coins categorized by bonus type.
-    """
-
-    def __init__(self):
-        """
-        Initializes a new satchel.
-        """
-        self._coins = []
-        self._bonus_coins = {
-            BonusTypes.THREE: [],
-            BonusTypes.FOUR: [],
-            BonusTypes.FIVE: [],
-        }
-
-    @property
-    def coins(self):
-        return self._coins
-
-    def get_bonus_coin_count(self, bonus_type):
-        """
-        Returns the count of bonus coins of a specific type in the satchel.
-
-        Args:
-            bonus_type (BonusTypes): The type of bonus coin to count.
-
-        Returns:
-            int: The count of the specified bonus coins.
-        """
-        return len(self._bonus_coins[bonus_type])
-
-    def add_coin(self, coin):
-        """
-        Adds a coin to the satchel.
-
-        Args:
-            coin (Coin): The coin to add.
-        """
-        self._coins.append(coin)
-
-    def add_bonus_coin(self, bonus_coin):
-        """
-        Adds a bonus coin to the satchel.
-
-        Args:
-            bonus_coin (BonusCoin): The bonus coin to add.
-        """
-        self._bonus_coins[bonus_coin.bonus_type].append(bonus_coin)
-
-    def calculate_points(self, include_bonus_coins=False):
-        """
-        Calculates the total points based on the coins and bonus coins in the satchel.
-
-        Args:
-            include_bonus_coins (bool): Whether to include bonus coins in the calculation.
-
-        Returns:
-            int: The total points.
-        """
-        points = 0
-        for coin in self._coins:
-            points += coin.value
-        if include_bonus_coins:
-            for bonus_coins_by_type in self._bonus_coins.values():
-                for bonus_coin in bonus_coins_by_type:
-                    points += bonus_coin.value
-        return points
-        
-        
-    def summary(self):
-        """
-        Returns a string representation of the satchel, including coins and bonus coins.
-
-        Returns:
-            str: The string representation of the satchel.
-        """
-        s = f"{bold}Satchel:{reset}\n{Stats.MONEY.value}: {self.calculate_points()} | "
-        s += f"{BonusTypes.THREE.value}: {self.get_bonus_coin_count(BonusTypes.THREE)} "
-        s += f"{BonusTypes.FOUR.value}: {self.get_bonus_coin_count(BonusTypes.FOUR)} "
-        s += f"{BonusTypes.FIVE.value}: {self.get_bonus_coin_count(BonusTypes.FIVE)}"
-        
-        return s
-    
-    def __repr__(self):
-        s = f""
-        s += self.calculate_points()
-        
-        for bonus_type in BonusTypes:
-            s += "_" + str(bonus_type.name) + ":" + str(self.get_bonus_coin_count(bonus_type))
-            
-        return s
-
-    def __str__(self):
-        return self.summary()
-        
-    def __eq__(self, other):
-        # two satchels are the same if they contain the same number of points,
-        # and bonus coins of each type
-        if isinstance(other, Satchel):
-            return repr(self) == repr(other)
-
-    def __hash__(self):
-        return hash(repr(s))
+    def calculate_reward(self,
+                         old_observation: MarketObservation,
+                         new_observation: MarketObservation,
+                         has_acted: bool,
+                         environment_reward: Optional[float]):
+        pass

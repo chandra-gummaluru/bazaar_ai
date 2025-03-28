@@ -1,3 +1,2 @@
 bazaar_ai
-demo
-quick_demo
+example
