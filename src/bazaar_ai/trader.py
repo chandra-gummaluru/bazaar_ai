@@ -1,4 +1,5 @@
-from typing import Optional
+from __future__ import annotations
+from typing import Optional, Callable
 from enum import Enum
 
 from arelai.player import Player, Action
@@ -14,12 +15,14 @@ class TraderActionType(Enum):
 class TraderAction(Action):
     def __init__(self,
                  trader_action_type: TraderActionType,
+                 actor: Trader,
                  requested_goods: Goods,
                  offered_goods: Goods
                  ):
         self._trader_action_type = trader_action_type
         self.requested_goods = requested_goods
         self.offered_goods = offered_goods
+        super().__init__(actor)
 
     @property
     def trader_action_type(self):
@@ -37,7 +40,7 @@ class SellAction(TraderAction):
     GoodType.CAMEL: 0
     }
     
-    def __init__(self, sell: GoodType, count: int):
+    def __init__(self, actor: Trader, sell: GoodType, count: int):
         
         self._sell = sell
         self._count = count
@@ -47,33 +50,35 @@ class SellAction(TraderAction):
         
         super().__init__(
             TraderActionType.SELL,
+            actor,
             requested_goods,
             offered_goods
             )
     
     def all_actions(observation: MarketObservation) -> list['SellAction']:
+        actor = observation.actor
         actions = []
         actor_goods = observation.actor_goods
         for good_type in GoodType:
             if good_type == GoodType.CAMEL:
                 continue
             for count in range(SellAction.MIN_SELL_COUNT[good_type], actor_goods[good_type]+1):
-                action = SellAction(good_type, count)
+                action = SellAction(actor, good_type, count)
                 actions.append(action)
         return actions
     
 class TakeAction(TraderAction):
-    def __init__(self, take: GoodType, count: int):
+    def __init__(self, actor: Trader, take: GoodType, count: int):
         
         self._take = take
         self._count = count
-
 
         offered_goods = Goods()
         requested_goods = Goods.from_dict({take: count})
 
         super().__init__(
             TraderActionType.TAKE,
+            actor,
             requested_goods,
             offered_goods)
 
@@ -83,20 +88,22 @@ class TakeAction(TraderAction):
         market_goods = observation.market_goods
         actor_goods = observation.actor_goods
 
+        actor = observation.actor
+
         # if taking camels, must take all camels
         if market_goods[GoodType.CAMEL] > 0:
-            actions.append(TakeAction(GoodType.CAMEL, market_goods[GoodType.CAMEL]))
+            actions.append(TakeAction(actor, GoodType.CAMEL, market_goods[GoodType.CAMEL]))
         # otherwise, the actor cannot take more goods than he/she can hold
         if actor_goods.count(include_camels=False) < observation.max_player_goods_count:
             for good_type in GoodType:
                 if good_type != GoodType.CAMEL:
                     if market_goods[good_type] > 0:
-                        actions.append(TakeAction(good_type, 1))
+                        actions.append(TakeAction(actor, good_type, 1))
         return actions
     
 
 class TradeAction(TraderAction):
-    def __init__(self, net: Goods):
+    def __init__(self, actor: Trader, net: Goods):
 
         requested_goods = Goods()
         offered_goods = Goods()
@@ -111,6 +118,7 @@ class TradeAction(TraderAction):
 
         super().__init__(
             TraderActionType.TRADE,
+            actor,
             requested_goods,
             offered_goods)
 
@@ -119,6 +127,8 @@ class TradeAction(TraderAction):
 
         actor_goods = observation.actor_goods
         market_goods = observation.market_goods
+
+        actor = observation.actor
 
         max_take = {gt: market_goods[gt] for gt in GoodType if gt != GoodType.CAMEL}
         max_give = {gt: actor_goods[gt] for gt in GoodType}
@@ -129,7 +139,7 @@ class TradeAction(TraderAction):
 
         actions = []
         for combo in all_possible:
-            action = TradeAction(Goods.from_dict(dict(zip(GoodType, combo))))
+            action = TradeAction(actor, Goods.from_dict(dict(zip(GoodType, combo))))
             
             requested_goods = action.requested_goods
             offered_goods = action.offered_goods
@@ -172,7 +182,8 @@ class Trader(Player):
 
     def select_action(self,
                       actions: list[TraderAction],
-                      observation: MarketObservation):
+                      observation: MarketObservation,
+                      simulate_action_fnc: Callable[[TraderAction], MarketObservation]):
         return self.rng.choice(actions)
     
     def calculate_reward(self,

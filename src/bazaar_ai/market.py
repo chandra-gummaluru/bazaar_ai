@@ -1,10 +1,18 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
 from arelai.game import State, Observation
 
 from .goods import GoodType, Goods
 from .coins import BonusType, Coins
 
+if TYPE_CHECKING:
+    from .trader import Trader, TraderAction
+
 import random
 from uuid import UUID
+
+
 
 
 class Market(State):
@@ -12,8 +20,9 @@ class Market(State):
     def __init__(
         self,
         seed,
-        player_ids: list[UUID],
-        actor_id: UUID,
+        players: list[Trader],
+        actor: Trader,
+        action: TraderAction,
         reserved_goods: list[GoodType],
         goods_coins: dict[GoodType, list],
         bonus_coins: dict[BonusType, list],
@@ -24,12 +33,13 @@ class Market(State):
     ):
         
         super().__init__(
-            actor_ids=[actor_id])
+            actor=actor,
+            action=action)
 
         # use this for random operations
         self.rng = random.Random(seed)
 
-        self.player_ids = player_ids
+        self.players = players
 
         self.reserved_goods = reserved_goods
         self.rng.shuffle(self.reserved_goods)
@@ -45,18 +55,18 @@ class Market(State):
         self.player_goods = {}
         self.player_coins = {}
         
-        for player_id in self.player_ids:
-            self.player_coins[player_id] = Coins()
-            self.player_goods[player_id] = Goods()
+        for player in self.players:
+            self.player_coins[player] = Coins()
+            self.player_goods[player] = Goods()
 
         self.max_player_goods_count = max_player_goods_count
         self.initial_player_goods_count = initial_player_goods_count
         
         # give each player some goods
         for _ in range(initial_player_goods_count):
-            for player_id in self.player_ids:
+            for player in self.players:
                 good_type = self.reserved_goods.pop()
-                self.player_goods[player_id].add(good_type)
+                self.player_goods[player].add(good_type)
 
         self.max_goods_count = max_goods_count
         self.goods = Goods()
@@ -74,15 +84,15 @@ class Market(State):
                 self.goods.add(good_type)
 
     def get_non_actor(self):
-        non_actor_id = [player_id for player_id in self.player_ids if
-                               player_id not in self.actor_ids][0]
-        return non_actor_id
+        non_actor = [player for player in self.players if player != self.actor][0]
+        return non_actor
 
 
 class MarketObservation(Observation):
     def __init__(self,
             observer_id: UUID,
             actor_id: UUID,
+            action: TraderAction,
             actor_goods: Goods,
             actor_goods_coins: dict[GoodType, list[int]],
             actor_bonus_coins_counts: dict[BonusType, int],
@@ -94,6 +104,7 @@ class MarketObservation(Observation):
             max_market_goods_count: int
     ):
         self.actor = actor_id
+        self.action = action
         self.actor_goods = actor_goods
         self.actor_goods_coins = actor_goods_coins
         self.actor_bonus_coins_counts = actor_bonus_coins_counts

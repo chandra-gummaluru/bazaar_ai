@@ -27,7 +27,10 @@ class Bazaar(Game):
         The current game state represented by a Market instance.
     """
 
-    def __init__(self, players: dict[UUID, Trader], state: Market):
+    def __init__(self,
+                 players: dict[UUID, Trader],
+                 state: Market,
+                 max_rounds: int = 500):
         """
         Initialize the Bazaar game with players and an initial state.
 
@@ -39,6 +42,7 @@ class Bazaar(Game):
             The initial state of the market.
         """
         super().__init__(players, state)
+        self.max_rounds = max_rounds
 
     def terminal(self, state: Market) -> bool:
         """
@@ -54,7 +58,7 @@ class Bazaar(Game):
         bool
             True if the game is over, False otherwise.
         """
-        if self.round > 1000:
+        if self.round > self.max_rounds:
             return True
 
         if len(state.reserved_goods) == 0:
@@ -83,12 +87,11 @@ class Bazaar(Game):
         MarketObservation
             The observable view of the market for the observer.
         """
-        player_id = observer.id
-        trader_goods = state.player_goods[player_id]
-        trader_goods_coins = state.player_coins[player_id].goods_coins
+        trader_goods = state.player_goods[observer]
+        trader_goods_coins = state.player_coins[observer].goods_coins
 
         trader_bonus_counts = {
-            bonus: len(state.player_coins[player_id].bonus_coins[bonus])
+            bonus: len(state.player_coins[observer].bonus_coins[bonus])
             for bonus in BonusType
         }
 
@@ -98,8 +101,9 @@ class Bazaar(Game):
         }
 
         return MarketObservation(
-            player_id,
-            state.actor_ids[0],
+            observer,
+            state.actor,
+            state.action,
             trader_goods,
             trader_goods_coins,
             trader_bonus_counts,
@@ -134,7 +138,7 @@ class Bazaar(Game):
             TakeAction.all_actions(obs)
         )
 
-    def apply_action(self, state: Market, action_profile: dict[UUID, TradeAction]) -> Market:
+    def apply_action(self, state: Market, action: TraderAction) -> Market:
         """
         Apply the selected action to the game state and return the new state.
 
@@ -142,8 +146,8 @@ class Bazaar(Game):
         ----------
         state : Market
             The current market state.
-        action_profile : dict[UUID, TradeAction]
-            A mapping of player ID to their chosen action.
+        action: TraderAction
+            The current actor's action.
 
         Returns
         -------
@@ -151,14 +155,14 @@ class Bazaar(Game):
             The new market state after applying the action.
         """
         new_state = state.clone()
-        player_id, action = list(action_profile.items())[0]
+        actor = action.actor
 
         for good in action.requested_goods.to_list():
-            new_state.player_goods[player_id].add(good)
+            new_state.player_goods[actor].add(good)
             new_state.goods.remove(good)
 
         for good in action.offered_goods.to_list():
-            new_state.player_goods[player_id].remove(good)
+            new_state.player_goods[actor].remove(good)
             if action.trader_action_type == TraderActionType.SELL:
                 new_state.sold_goods.append(good)
             else:
@@ -167,14 +171,15 @@ class Bazaar(Game):
         if action.trader_action_type == TraderActionType.SELL:
             for _ in range(action._count):
                 coin = new_state.coins.pop_goods_coin(action._sell)
-                new_state.player_coins[player_id].add_goods_coin(action._sell, coin)
+                new_state.player_coins[actor].add_goods_coin(action._sell, coin)
 
             if action._count in BonusType._value2member_map_:
                 bonus_type = BonusType(action._count)
                 bonus_coin = new_state.coins.pop_bonus_coin(bonus_type)
-                new_state.player_coins[player_id].add_bonus_coin(bonus_type, bonus_coin)
+                new_state.player_coins[actor].add_bonus_coin(bonus_type, bonus_coin)
 
-        new_state.actor_ids = [self.state.get_non_actor()]
+        new_state.actor = self.state.get_non_actor()
+        new_state.action = action
         new_state.refill_market()
         return new_state
 
@@ -182,7 +187,6 @@ class Bazaar(Game):
         self,
         player: Trader,
         old_state: Market,
-        action_profile: dict[UUID, TradeAction],
         new_state: Market
     ) -> float:
         """
@@ -194,8 +198,6 @@ class Bazaar(Game):
             The trader receiving the reward.
         old_state : Market
             The previous market state.
-        action_profile : dict[UUID, TradeAction]
-            The action taken.
         new_state : Market
             The market state after applying the action.
 
@@ -209,9 +211,9 @@ class Bazaar(Game):
 
         total = 0
         for good in GoodType:
-            total += sum(new_state.player_coins[player.id].goods_coins[good])
+            total += sum(new_state.player_coins[player].goods_coins[good])
         for bonus in BonusType:
-            total += sum(new_state.player_coins[player.id].bonus_coins[bonus])
+            total += sum(new_state.player_coins[player].bonus_coins[bonus])
         return total
 
     def output(self):
@@ -250,6 +252,44 @@ class Bazaar(Game):
                 if include_camels or g != GoodType.CAMEL
             )
 
+        def make_action_panel():
+            action_text = Text()
+
+            action = self.state.action
+
+            if not action:
+                return Panel(
+                "None",
+                title=Text("Action", style="magenta bold"),
+                border_style="magenta",
+                padding=(1, 2),
+                width=70
+            )
+
+            actor = self.old_state.actor
+            
+            # Action details
+            action_text.append(f"By: {actor.name}\n", style="bold")
+            action_text.append(f"Type: {action.trader_action_type.value}\n", style="bold")
+
+            # Offered goods
+            action_text.append("\nOffered Goods:\n", style="bold")
+            offered_goods = format_goods(action.offered_goods)
+            action_text.append(offered_goods + "\n")
+
+            # Requested goods
+            action_text.append("\nRequested Goods:\n", style="bold")
+            requested_goods = format_goods(action.requested_goods)
+            action_text.append(requested_goods + "\n")
+
+            return Panel(
+                action_text,
+                title=Text("Action", style="magenta bold"),
+                border_style="magenta",
+                padding=(1, 2),
+                width=70
+            )
+        
         def make_market_panel():
             text = Text()
             text.append("Current Goods:\n", style="bold")
@@ -271,14 +311,14 @@ class Bazaar(Game):
             return Panel(text, title=Text("Market", style="yellow bold"),
                         border_style="yellow", padding=(1, 2), width=70)
 
-        def make_player_panel(player_id, is_terminal):
-            player = self.players.get(player_id)
-            if not player:
-                return Panel(f"Player {player_id} not found", title="Error", border_style="red")
 
-            goods = self.state.player_goods[player_id]
-            goods_coins = self.state.player_coins[player_id].goods_coins
-            bonus_coins = self.state.player_coins[player_id].bonus_coins
+        def make_player_panel(player, is_terminal):
+            if not player:
+                return Panel(f"Player {player.name} not found", title="Error", border_style="red")
+
+            goods = self.state.player_goods[player]
+            goods_coins = self.state.player_coins[player].goods_coins
+            bonus_coins = self.state.player_coins[player].bonus_coins
 
             body = Text()
             body.append(f"Goods:\n{format_goods(goods, include_camels=False)}\n")
@@ -305,14 +345,18 @@ class Bazaar(Game):
                          border_style="cyan", padding=(1, 2), width=40)
 
         is_terminal = self.terminal(self.state)
-        if not is_terminal:
-            console.print(Rule(title=f"Round {self.round}"))
-        else:
-            console.print(Rule(title=f"Results"))
+        console.print(Rule(title=f"Round {self.round}"))
+        console.print(make_action_panel())
         console.print(make_market_panel())
         console.print()
         console.print(Columns([
-            make_player_panel(player_id, is_terminal)
+            make_player_panel(player_id, False)
+            for player_id in self.players
+        ]))
+        if is_terminal:
+            console.print(Rule(title=f"Results"))
+            console.print(Columns([
+            make_player_panel(player_id, True)
             for player_id in self.players
         ]))
 
@@ -352,8 +396,9 @@ class BasicBazaar(Bazaar):
 
         initial_state = Market(
             seed=seed,
-            player_ids=list(players.keys()),
-            actor_id=list(players.keys())[0],
+            players = players,
+            actor = players[0],
+            action = None,
             reserved_goods = reserved_goods,
             goods_coins = goods_coins,
             bonus_coins = bonus_coins,

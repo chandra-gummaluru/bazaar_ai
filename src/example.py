@@ -1,17 +1,14 @@
 from bazaar_ai.bazaar import BasicBazaar, Trader
 
-trader1 = Trader(seed = 0,
+trader1 = Trader(seed = 356,
                  name = "Caveman")
-trader2 = Trader(seed = 0, 
+trader2 = Trader(seed = 12, 
                  name = "Villager")
 
-traders = {
-    trader1.id: trader1,
-    trader2.id: trader2
-}
+traders = [trader1, trader2]
 
 game = BasicBazaar(
-    seed = 0,
+    seed = 43646,
     players = traders,
 )
 
