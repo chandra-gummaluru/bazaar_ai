@@ -1,10 +1,10 @@
 # 🐪 Bazaar
 
-**Bazaar** is a lightweight, extensible simulation of the *Jaipur* board game, specifically designed for training reinforcement learning (RL) agents. It replicates the core mechanics and strategic depth of the original *Jaipur* game while providing a clean and easy-to-use API for custom agents, facilitating the development of RL environments.
+**Bazaar** is a lightweight, extensible simulation of the *Jaipur* board game, specifically designed for training AI agents. It replicates the core mechanics and strategic depth of the original *Jaipur* game while providing a clean and easy-to-use API for custom agents, facilitating the development of AI environments.
 
 ## 🎯 Purpose
 
-The library provides a fully functional, object-oriented implementation of the *Jaipur* game loop with minimal dependencies. It focuses on key aspects of game modeling and reinforcement learning, including:
+The library provides a fully functional, object-oriented implementation of the *Jaipur* game loop with minimal dependencies. It focuses on key aspects of game modeling and learning, including:
 
 - **Modeling  Actions and Transitions**: Accurately simulating possible player actions and game state transitions.
 - **Enforcing All Game Rules**: Ensures all gameplay mechanics are adhered to.
@@ -16,7 +16,7 @@ By providing a well-structured environment, **Bazaar** offers the flexibility an
 
 ## 🧠 Why Jaipur?
 
-*Jaipur* is an engaging two-player trading game that makes it an ideal environment for RL research. Here’s why it’s particularly suitable:
+*Jaipur* is an engaging two-player trading game that makes it an ideal environment for AI research. Here’s why it’s particularly suitable:
 
 - **Small but Rich Action Space**: While the game has a relatively small number of possible actions, these actions lead to complex decision-making and strategic depth.
 - **Partial Observability**: Players don’t have access to the full game state at all times, forcing them to make decisions based on incomplete information, simulating real-world uncertainty.
