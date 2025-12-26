@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: bazaar_ai
-Version: 0.0.7
+Version: 0.0.8
 Summary: A simple bazaar simulator
 Author-email: Chandra Gummaluru <chandra.gummaluru@gmail.com>
 Project-URL: Homepage, https://github.com/chandra-gummaluru/bazaar_ai
@@ -63,10 +63,7 @@ trader1 = Trader(seed = 0,
 trader2 = Trader(seed = 0, 
                  name = "Villager")
 
-traders = {
-    trader1.id: trader1,
-    trader2.id: trader2
-}
+traders = [trader1, trader2]
 
 game = BasicBazaar(
     seed = 0,
@@ -79,11 +76,13 @@ game.play()
 To implement custom agents, the `Trader` class can be extended.
 
 ```python
-from bazaar_ai.trader import Trader
+from bazaar_ai.trader import Trader, TraderAction
+from bazaar_ai.market import MarketObservation
+from typing import Optional, Callable
 
 class CustomTrader(Trader):
     def __init__(self, seed, name):
-        super()__init__(seed, name)
+        super().__init__(seed, name)
         
         # add additional data
         pass 
@@ -91,7 +90,8 @@ class CustomTrader(Trader):
         
     def select_action(self,
                   actions: list[TraderAction],
-                  observation: MarketObservation):
+                  observation: MarketObservation,
+                      simulate_action_fnc: Callable[[TraderAction], MarketObservation]):
         """
         Method for selecting an action based on the market observation.
 
@@ -130,12 +130,12 @@ class CustomTrader(Trader):
 
         environment_reward : Optional[float]
             An optional reward value from the environment. This reward could come from an external system that influences the agent's reward function.
+            
+        The calculated reward, which might take into account the market change, the action, and the environment's reward. This value should be positive or negative based on the desirability of the new market state or the success of the action taken. This function should also update any relevant player data for choosing the next action.
 
         Returns:
         -------
-        float
-            The calculated reward, which might take into account the market change, the action, and the environment's reward. 
-            This value should be positive or negative based on the desirability of the new market state or the success of the action taken.
+        None
         """
         pass
 
