@@ -48,6 +48,11 @@ class Bazaar(Game):
         """
         Determine whether the game has reached a terminal (end) state.
 
+        The game ends when:
+        1. Maximum rounds exceeded, OR
+        2. Three or more good types have empty coin stacks, OR
+        3. The deck is empty AND the current player has no valid actions
+
         Parameters
         ----------
         state : Market
@@ -61,15 +66,22 @@ class Bazaar(Game):
         if self.round > self.max_rounds:
             return True
 
-        if len(state.reserved_goods) == 0:
-            return True
-
+        # Check if 3 or more goods have empty coin stacks
         empty_goods_coin_stacks = sum(
             len(state.coins.goods_coins[good]) == 0
             for good in GoodType if good != GoodType.CAMEL
         )
+        if empty_goods_coin_stacks >= 3:
+            return True
 
-        return empty_goods_coin_stacks >= 3
+        # If deck is empty, check if current player has any valid actions
+        if len(state.reserved_goods) == 0:
+            # Get all legal actions for the current actor
+            legal_actions = self.all_actions(state.actor, state)
+            # Game ends only if there are no valid actions
+            return len(legal_actions) == 0
+
+        return False
 
     def observe(self, observer: Trader, state: Market) -> MarketObservation:
         """
