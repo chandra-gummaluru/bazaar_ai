@@ -1,128 +1,184 @@
-# 🐪 Bazaar
+# 🐪 Bazaar-AI
 
-**Bazaar** is a lightweight, extensible simulation of the *Jaipur* board game, specifically designed for training AI agents. It replicates the core mechanics and strategic depth of the original *Jaipur* game while providing a clean and easy-to-use API for custom agents, facilitating the development of AI environments.
+## What Is Bazaar-AI?
 
-## 🎯 Purpose
+**Bazaar-AI** is a Python-based library built on top of [Arelai](https://github.com/chandra-gummaluru/arelai) that faithfully recreates the strategic card game Jaipur. It provides:
 
-The library provides a fully functional, object-oriented implementation of the *Jaipur* game loop with minimal dependencies. It focuses on key aspects of game modeling and learning, including:
+- 🎮 **a complete game implementation**, accurately modeling all Jaipur rules
+- 🤖 **a plug-and-play agent interface**, allowing custom agents to be created by extending a single class
+- 📊 **a serializable game state**, making it easy to convert states into observations for RL algorithms
+- 🎯 **support for custom reward functions**, so you can define your own training signals
+- 🖥️ **a visual simulator**, featuring a polished web-based UI for watching agents compete in real time
 
-- **Modeling  Actions and Transitions**: Accurately simulating possible player actions and game state transitions.
-- **Enforcing All Game Rules**: Ensures all gameplay mechanics are adhered to.
-- **Custom Agent Integration**: Supports easy integration of custom RL agents, enabling researchers to experiment with different strategies and learning techniques.
+<p align="center">
+  <a href="https://chandra-gummaluru.github.io/2025-12-29/bazaar-ai">
+    <img src="https://github.com/user-attachments/assets/2e983ad6-6384-4093-8472-6d06dadddd42" style="width: 100%; max-width: 100%;" />
+  </a>
+</p>
 
-By providing a well-structured environment, **Bazaar** offers the flexibility and extensibility necessary to build and train RL agents in a dynamic and competitive setting.
+With Bazaar-AI, students can experiment with different RL approaches—from simple heuristics to Monte Carlo Tree Search to deep reinforcement learning—all within a rich, strategic environment.
 
----
+## Why Jaipur?
 
-## 🧠 Why Jaipur?
+Jaipur is an ideal game for AI research and education because it captures many challenges found in real-world decision-making, including:
 
-*Jaipur* is an engaging two-player trading game that makes it an ideal environment for AI research. Here’s why it’s particularly suitable:
+- **partial observability**, where players cannot see the deck or their opponent’s full hand, requiring decisions to be made under uncertainty.
 
-- **Small but Rich Action Space**: While the game has a relatively small number of possible actions, these actions lead to complex decision-making and strategic depth.
-- **Partial Observability**: Players don’t have access to the full game state at all times, forcing them to make decisions based on incomplete information, simulating real-world uncertainty.
-- **Long-term Planning**: Success depends not only on immediate gains but on long-term strategy, perfect for testing agents that need to plan ahead.
-- **Fast Episode Turnaround**: The game’s relatively short length makes it ideal for training agents quickly, with fast iterations and short training cycles.
+- **delayed rewards**, in which actions taken now may only pay off several turns later, testing an agent’s ability to plan ahead.
 
-These characteristics make *Jaipur* an excellent environment for RL research.
+- **strategic depth**, where a relatively small action space still produces surprising complexity and multiple viable strategies.
 
----
+- **competitive dynamics**, as optimal play depends on anticipating and responding to an opponent’s strategy, introducing game-theoretic considerations.
 
-## ⚙️ Features
+- **fast episodes**, with games typically lasting 20 to 40 turns, enabling rapid iteration during development.
 
-- ✅ **Complete Implementation of Jaipur Rules**: All major rules of the *Jaipur* board game are faithfully replicated, ensuring accurate game play.
-- ✅ **Game State Transition Simulation**: Accurately models state transitions resulting from player actions, maintaining an up-to-date view of the game state.
-- ✅ **Easily Serializable State**: The game state can be serialized to facilitate observation modeling for RL agents.
-- ✅ **No UI**: This library is designed for programmatic play without any user interface, allowing for faster, automated training and experimentation.
+These characteristics make Jaipur an excellent stepping stone between toy problems and complex real-world applications—challenging enough to be interesting, but tractable enough for a semester project.
 
----
+## How It Works
 
-## 🚀 Quick Start
+The framework is built on Arelai, providing a clean object-oriented structure for game states, actions, and observations. The core game loop handles all the mechanics automatically, so you can focus entirely on developing your agent's decision-making logic.
 
-To get started with **Bazaar**, simply import the library, set up your traders (agents), and start a game. Here's a minimal example of how to run a basic game between two random traders:
+### Creating Custom Agents
 
-```python
-from bazaar_ai.bazaar import BasicBazaar, Trader
-
-trader1 = Trader(seed = 0,
-                 name = "Caveman")
-trader2 = Trader(seed = 0, 
-                 name = "Villager")
-
-traders = [trader1, trader2]
-
-game = BasicBazaar(
-    seed = 0,
-    players = traders,
-)
-
-game.play()
-```
-
-To implement custom agents, the `Trader` class can be extended.
+Implementing your own agent is straightforward. Just extend the `Trader` class and override two key methods:
 
 ```python
 from bazaar_ai.trader import Trader, TraderAction
 from bazaar_ai.market import MarketObservation
 from typing import Optional, Callable
 
-class CustomTrader(Trader):
+class MyCustomAgent(Trader):
+    def __init__(self, seed, name):
+        super().__init__(seed, name)
+        # Initialize any agent-specific data structures
+        self.memory = []
+        
+    def select_action(self,
+                      actions: list[TraderAction],
+                      observation: MarketObservation,
+                      simulate_action_fnc: Callable[[TraderAction], MarketObservation]) -> TraderAction:
+        """
+        Choose an action based on the current market state.
+        
+        Args:
+            actions: List of legal actions available
+            observation: Current view of the market (your hand, market cards, etc.)
+            simulate_action_fnc: Function to simulate what happens if you take an action
+            
+        Returns:
+            The action you want to take
+        """
+        # Implement your decision logic here
+        # You can use simulate_action_fnc to look ahead!
+        
+        for action in actions:
+            future_state = simulate_action_fnc(action)
+            # Evaluate this future state...
+        
+        return best_action
+    
+    def calculate_reward(self,
+                        old_observation: MarketObservation,
+                        new_observation: MarketObservation,
+                        has_acted: bool,
+                        environment_reward: Optional[float]):
+        """
+        Calculate rewards and update any internal state.
+        
+        This is called after every turn (yours and your opponent's).
+        Use it to update value estimates, store experiences, etc.
+        
+        Args:
+            old_observation: Market state before the action
+            new_observation: Market state after the action
+            has_acted: True if this was your turn
+            environment_reward: Optional reward from the game (e.g., points scored)
+        """
+        # Update your agent's learning signals
+        reward = self._compute_reward(old_observation, new_observation)
+        self.memory.append((old_observation, new_observation, reward))
+```
+
+The `MarketObservation` provides everything an agent needs to make decisions, including:
+
+- **the agent’s current hand of goods**, representing available resources
+- **the cards currently in the market**, defining the set of immediate trade options
+- **the number of camels held**, which affects both trading capacity and scoring
+- **the available bonus tokens**, indicating potential future rewards
+- **the current score**, reflecting overall progress in the game
+- **the opponent’s visible information**, including their score, camel count, and hand size
+
+### The Visual Simulator
+
+One of the best features for teaching is the real-time visualization. The included web UI lets you:
+
+- watch agents compete step by step or at variable speeds
+- see the full game state at each turn
+- compare different agent strategies visually
+- debug agent behavior in real time
+
+This makes it easy to identify where an agent's strategy succeeds or fails, and helps students build intuition about what makes a good trading strategy.
+
+## Getting Started
+
+### 1. Installation
+
+First, install the library:
+
+```bash
+pip install bazaar_ai
+```
+
+### 2. Clone the UI Repository
+
+The visual simulator is in a separate repository:
+
+```bash
+git clone https://github.com/chandra-gummaluru/bazaar_aiui
+cd bazaar_aiui
+```
+
+### 3. Try the Demo
+
+Run a game between the built-in agents:
+
+```bash
+python bazaar_simulation.py
+```
+
+This will start a local web server and open your browser to the simulator. You can select different agents and watch them compete.
+
+### 4. Build Your Own Agent
+
+Create a new file in `bazaar_aiui/agents/my_agent.py`:
+
+```python
+from bazaar_ai.trader import Trader, TraderAction
+from bazaar_ai.market import MarketObservation
+
+class MyAgent(Trader):
     def __init__(self, seed, name):
         super().__init__(seed, name)
         
-        # add additional data
-        pass 
-            
-        
-    def select_action(self,
-                  actions: list[TraderAction],
-                  observation: MarketObservation,
-                      simulate_action_fnc: Callable[[TraderAction], MarketObservation]):
-        """
-        Method for selecting an action based on the market observation.
-
-        Args:
-            actions (list[TraderAction]): The list of actions.
-            market_observation (MarketObservation): The current state of the market.
-
-        Returns:
-            Action: The selected action.
-        """
-        
-        # choose an action
-        # based on the market observation
-        
-        pass
+    def select_action(self, actions, observation, simulate_action_fnc):
+        # Start simple - maybe just pick randomly?
+        import random
+        return random.choice(actions)
     
-    
-    def calculate_reward(self,
-                         old_observation: MarketObservation,
-                         new_observation: MarketObservation,
-                         has_acted: bool,
-                         environment_reward: Optional[float]):
-        """
-        Calculates the reward based on the change in market conditions, the action taken, and any external environment reward.
-
-        Parameters:
-        ----------
-        old_observation : MarketObservation
-            The previous state of the market before the action was taken.
-
-        new_observation : MarketObservation
-            The current state of the market after the action is taken.
-
-        has_acted : bool
-            A flag indicating whether an action was actually taken. This could influence the reward calculation, as no action may imply no reward.
-
-        environment_reward : Optional[float]
-            An optional reward value from the environment. This reward could come from an external system that influences the agent's reward function.
-            
-        The calculated reward, which might take into account the market change, the action, and the environment's reward. This value should be positive or negative based on the desirability of the new market state or the success of the action taken. This function should also update any relevant player data for choosing the next action.
-
-        Returns:
-        -------
-        None
-        """
-        pass
-
+    def calculate_reward(self, old_obs, new_obs, has_acted, env_reward):
+        pass  # No learning yet
 ```
 
+Then test it in the simulator by selecting it from the dropdown menu.
+
+## Try It Yourself
+
+The complete project is open source and available on GitHub:
+
+- **base library**: [arelai](https://github.com/chandra-gummaluru/arelai)
+- **core library**: [bazaar-ai](https://github.com/chandra-gummaluru/bazaar_ai)
+- **visual simulator**: [bazaar-aiui](https://github.com/chandra-gummaluru/bazaar_aiui)
+
+Whether you're teaching a course on AI, or just want to build a game-playing agent for fun, Bazaar-AI provides an accessible and engaging platform to get started.
+
+Have ideas for improvements or new features? Found a bug? I'd love to hear from you—feel free to open an issue or reach out directly!

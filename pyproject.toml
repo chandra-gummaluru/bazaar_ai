@@ -1,22 +1,119 @@
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
+# Bazaar-AI Quick Start Guide
 
-[project]
-name = "bazaar_ai"
-version = "0.2.0"
-authors = [
-  { name="Chandra Gummaluru", email="chandra.gummaluru@gmail.com" },
-]
-description = "A simple bazaar simulator"
-readme = "README.md"
-requires-python = ">=3.8"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "Operating System :: OS Independent",
-    "License :: OSI Approved :: MIT License",
-]
+Get up and running with Bazaar-AI in 5 minutes! 🐪
 
-[project.urls]
-Homepage = "https://github.com/chandra-gummaluru/bazaar_ai"
-Issues = "https://github.com/chandra-gummaluru/bazaar_ai/issues"
+## Installation
+
+### Option 1: Install from PyPI (when published)
+```bash
+pip install bazaar-ai
+```
+
+### Option 2: Install from Source (Development)
+```bash
+git clone https://github.com/chandra-gummaluru/bazaar_ai
+cd bazaar_ai
+pip install -e .
+```
+
+The `-e` flag installs in "editable" mode - changes to the code take effect immediately.
+
+## Running the Simulator
+
+### Command Line
+```bash
+bazaar-simulate
+```
+
+This will:
+1. Start a WebSocket server on `ws://localhost:8765`
+2. Open the simulator UI in your browser
+3. Load any agents you've created in the `agents/` folder
+
+### Programmatically
+```python
+from bazaar_ai.simulator import run_simulator
+run_simulator()
+```
+
+## Your First Agent
+
+### 1. Create a new file in `agents/my_first_agent.py`
+
+```python
+from bazaar_ai.trader import Trader, TraderAction
+from bazaar_ai.market import MarketObservation
+from typing import Callable
+
+class MyFirstAgent(Trader):
+    def __init__(self, seed, name):
+        super().__init__(seed, name)
+        
+    def select_action(self,
+                      actions: list[TraderAction],
+                      observation: MarketObservation,
+                      simulate_action_fnc: Callable[[TraderAction], MarketObservation]) -> TraderAction:
+        # Pick the first action (not very smart, but it works!)
+        return actions[0]
+    
+    def calculate_reward(self,
+                        old_observation: MarketObservation,
+                        new_observation: MarketObservation,
+                        has_acted: bool,
+                        environment_reward: float):
+        pass
+```
+
+### 2. Run the simulator
+```bash
+bazaar-simulate
+```
+
+### 3. Select your agent
+In the UI, select `MyFirstAgent` from the dropdown and click the hammer button to build the game!
+
+## Running Games Programmatically
+
+You don't need the UI to run games:
+
+```python
+from bazaar_ai.bazaar import BasicBazaar
+from bazaar_ai.trader import Trader
+
+# Create two agents
+agent1 = Trader(seed=0, name="Random Agent 1")
+agent2 = Trader(seed=0, name="Random Agent 2")
+
+# Create and run the game
+game = BasicBazaar(seed=0, players=[agent1, agent2])
+game.play()
+
+# Game state is in game.state
+print(f"Winner: {game.state.actor.name}")
+```
+
+## Next Steps
+
+- **Read the documentation** in `docs/` (coming soon!)
+- **Check out built-in agents** in `src/bazaar_ai/simulator/agents/`
+- **Read the agents README** in `agents/README.md`
+- **Experiment with strategies** - try greedy, lookahead, or learning-based approaches
+
+## Common Issues
+
+### "Command not found: bazaar-simulate"
+Run `pip install -e .` again from the repo root.
+
+### "No agents found"
+Make sure your agent file is in the `agents/` folder and defines a class that extends `Trader`.
+
+### WebSocket connection failed
+Make sure port 8765 is available. Close any other instances of the simulator.
+
+## Getting Help
+
+- Check `agents/README.md` for agent development tips
+- Look at example agents in `src/bazaar_ai/simulator/agents/`
+- Open an issue on GitHub
+
+Happy coding! 🎮
