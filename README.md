@@ -1,7 +1,5 @@
 # 🐪 Bazaar-AI
 
-## What Is Bazaar-AI?
-
 **Bazaar-AI** is a Python-based library built on top of [Arelai](https://github.com/chandra-gummaluru/arelai) that faithfully recreates the strategic card game Jaipur. It provides:
 
 - 🎮 **a complete game implementation**, accurately modeling all Jaipur rules
