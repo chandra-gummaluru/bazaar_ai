@@ -126,31 +126,22 @@ This makes it easy to identify where an agent's strategy succeeds or fails, and 
 First, install the library:
 
 ```bash
-pip install bazaar_ai
+pip install bazaar-ai
 ```
 
-### 2. Clone the UI Repository
-
-The visual simulator is in a separate repository:
-
-```bash
-git clone https://github.com/chandra-gummaluru/bazaar_aiui
-cd bazaar_aiui
-```
-
-### 3. Try the Demo
+### 2. Try the Demo
 
 Run a game between the built-in agents:
 
 ```bash
-python bazaar_simulation.py
+# from the directory with your agents/ folder
+bazaar-simulate
 ```
 
 This will start a local web server and open your browser to the simulator. You can select different agents and watch them compete.
 
-### 4. Build Your Own Agent
-
-Create a new file in `bazaar_aiui/agents/my_agent.py`:
+### 3. Build Your Own Agent
+Create a directory to store your agents called `agents`. Create a new file in `agents/my_agent.py`:
 
 ```python
 from bazaar_ai.trader import Trader, TraderAction
@@ -171,13 +162,12 @@ class MyAgent(Trader):
 
 Then test it in the simulator by selecting it from the dropdown menu.
 
-## Try It Yourself
+## Source Code
 
 The complete project is open source and available on GitHub:
 
 - **base library**: [arelai](https://github.com/chandra-gummaluru/arelai)
 - **core library**: [bazaar-ai](https://github.com/chandra-gummaluru/bazaar_ai)
-- **visual simulator**: [bazaar-aiui](https://github.com/chandra-gummaluru/bazaar_aiui)
 
 Whether you're teaching a course on AI, or just want to build a game-playing agent for fun, Bazaar-AI provides an accessible and engaging platform to get started.
 
