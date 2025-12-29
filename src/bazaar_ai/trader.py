@@ -90,6 +90,9 @@ class TakeAction(TraderAction):
 
         actor = observation.actor
 
+        if market_goods.count() < 5:
+            return actions
+
         # if taking camels, must take all camels
         if market_goods[GoodType.CAMEL] > 0:
             actions.append(TakeAction(actor, GoodType.CAMEL, market_goods[GoodType.CAMEL]))
