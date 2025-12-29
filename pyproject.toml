@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bazaar-ai"
-version = "0.3.1"
+version = "0.9.0"
 description = "A simulation environment for training AI agents to play Jaipur"
 readme = "README.md"
 requires-python = ">=3.8"
@@ -28,9 +28,9 @@ classifiers = [
 ]
 
 dependencies = [
-    "arelai>=0.1.0",
-    "websockets>=12.0",
-    "rich>=13.0.0",
+    "arelai",
+    "websockets",
+    "rich",
 ]
 
 [project.optional-dependencies]
