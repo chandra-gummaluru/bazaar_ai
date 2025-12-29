@@ -58,6 +58,11 @@ class SellAction(TraderAction):
     def all_actions(observation: MarketObservation) -> list['SellAction']:
         actor = observation.actor
         actions = []
+
+        market_goods = observation.market_goods
+        if market_goods.count() < 5:
+            return []
+    
         actor_goods = observation.actor_goods
         for good_type in GoodType:
             if good_type == GoodType.CAMEL:
@@ -91,7 +96,7 @@ class TakeAction(TraderAction):
         actor = observation.actor
 
         if market_goods.count() < 5:
-            return actions
+            return []
 
         # if taking camels, must take all camels
         if market_goods[GoodType.CAMEL] > 0:
@@ -132,6 +137,9 @@ class TradeAction(TraderAction):
         market_goods = observation.market_goods
 
         actor = observation.actor
+
+        if market_goods.count() < 5:
+            return []
 
         max_take = {gt: market_goods[gt] for gt in GoodType if gt != GoodType.CAMEL}
         max_give = {gt: actor_goods[gt] for gt in GoodType}
