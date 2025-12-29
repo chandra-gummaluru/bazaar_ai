@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "bazaar-ai"
-version = "0.9.2"
+version = "0.9.3"
 description = "A simulation environment for training AI agents to play Jaipur"
 readme = "README.md"
 requires-python = ">=3.8"

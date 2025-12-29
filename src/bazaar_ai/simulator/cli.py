@@ -17,7 +17,7 @@ def main():
     print("🐪 Starting Bazaar-AI Simulator...")
     
     # Get the path to the server module
-    import server
+    from . import server
     server_path = Path(server.__file__)
     
     # Start the server in the background
