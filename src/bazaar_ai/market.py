@@ -78,10 +78,9 @@ class Market(State):
         self.max_goods_count = max_goods_count
     
     def refill_market(self):
-        while self.goods.count() < self.max_goods_count:
-            if self.reserved_goods:
-                good_type = self.reserved_goods.pop()
-                self.goods.add(good_type)
+        while self.goods.count() < self.max_goods_count and self.reserved_goods:
+            good_type = self.reserved_goods.pop()
+            self.goods.add(good_type)
 
     def get_non_actor(self):
         non_actor = [player for player in self.players if player != self.actor][0]
