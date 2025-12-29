@@ -163,6 +163,8 @@ class TradeAction(TraderAction):
 
             # cannot give more than actor has or take more than market has
             violates = False
+            if market_goods.count() < 5 and requested_goods.count() >= 1:
+                violates = True
             for gt in GoodType:
                 if requested_goods[gt] > market_goods[gt]:
                     violates = True
